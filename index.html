@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Optická lavice - čočky</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="panel">
+        <h1>Simulace optické lavice</h1>
+        <p>
+          Zdroj světla vlevo vysílá 5 laserových paprsků. Do dráhy můžeš vkládat
+          spojky i rozptylky a měnit jejich ohniskovou vzdálenost.
+        </p>
+
+        <div class="actions">
+          <button id="addConverging">Přidat spojku</button>
+          <button id="addDiverging">Přidat rozptylku</button>
+          <button id="resetLenses" class="secondary">Vymazat čočky</button>
+        </div>
+
+        <div class="control">
+          <label id="sourceDirectionLabel" for="sourceDirection">
+            Směr svazku: rovnoběžný
+          </label>
+          <input
+            id="sourceDirection"
+            type="range"
+            min="-1"
+            max="1"
+            step="0.01"
+            value="0"
+          />
+          <button id="resetSourceDirection" class="secondary" type="button">
+            Rovnoběžně
+          </button>
+        </div>
+
+        <div id="lensesContainer" class="lenses"></div>
+      </section>
+
+      <section class="benchWrap">
+        <canvas id="benchCanvas" width="1100" height="520"></canvas>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
