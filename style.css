@@ -2,20 +2,31 @@
   box-sizing: border-box;
 }
 
+html {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   margin: 0;
+  min-height: 0;
   font-family: Arial, Helvetica, sans-serif;
   background: #f4f6fb;
   color: #1d2430;
 }
 
 .app {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  min-height: 100vh;
   padding: 16px;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .panel {
@@ -23,6 +34,7 @@ body {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 4px 16px rgba(24, 40, 72, 0.08);
+  flex-shrink: 0;
 }
 
 h1 {
@@ -33,6 +45,7 @@ h1 {
 
 p {
   margin-top: 0;
+  margin-bottom: 0;
   line-height: 1.45;
 }
 
@@ -40,7 +53,55 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
+}
+
+.benchWorkspaceToolbar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  left: auto;
+  z-index: 2;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 10px;
+  box-shadow: 0 2px 14px rgba(18, 28, 52, 0.14);
+}
+
+button.benchToolbarBtn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  background: #1f6feb;
+}
+
+button.benchToolbarBtn:hover {
+  filter: brightness(1.06);
+}
+
+button.benchToolbarBtn:active {
+  filter: brightness(0.94);
+}
+
+button.benchToolbarBtn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+button.benchToolbarBtnDanger {
+  background: #c33d3d;
 }
 
 button {
@@ -57,32 +118,64 @@ button.secondary {
   background: #5f6671;
 }
 
+.lensCardDetail {
+  border: 1px solid #d8dfeb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #ffffff;
+}
+
+.lensCardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.lensCardTitles {
+  flex: 1;
+  min-width: 0;
+}
+
+.lensCardTitles .lensTitle {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.lensFocalSummary {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: #1d2430;
+}
+
+.lensCardTop .removeBtn {
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.lensPowerSlider {
+  width: 100%;
+}
+
+.lensPowerSlider input[type="range"] {
+  display: block;
+  width: 100%;
+  accent-color: #1f6feb;
+}
+
 .lenses {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: calc(100vh - 220px);
-  overflow: auto;
-}
-
-.lensCard {
-  border: 1px solid #d8dfeb;
-  border-radius: 10px;
-  padding: 10px;
-  background: #fafcff;
-}
-
-.lensHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.lensTitle {
-  margin: 0;
-  font-size: 0.95rem;
+  flex-shrink: 0;
+  margin-top: 8px;
+  height: 112px;
+  min-height: 112px;
+  box-sizing: border-box;
+  overflow-y: auto;
 }
 
 .removeBtn {
@@ -91,40 +184,130 @@ button.secondary {
   font-size: 0.8rem;
 }
 
-.control {
-  margin-bottom: 6px;
-  font-size: 0.9rem;
+.benchRow {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px;
+  min-height: 0;
 }
 
-.control label {
-  display: block;
-  margin-bottom: 4px;
+.sourceDirectionBanner {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 12px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(24, 40, 72, 0.08);
+  max-width: 88px;
+  align-self: stretch;
+  min-height: 0;
 }
 
-.control input[type="range"] {
-  width: 100%;
+.verticalSliderWrap {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 36px;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verticalSliderWrap input[type="range"] {
+  width: 200px;
+  height: 28px;
+  margin: 0;
+  transform: rotate(-90deg);
+  transform-origin: center center;
+  accent-color: #1f6feb;
+}
+
+.sourceDirectionBanner #resetSourceDirection {
+  padding: 8px 6px;
+  font-size: 0.72rem;
+  max-width: 100%;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
 }
 
 .benchWrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   background: #ffffff;
   border-radius: 12px;
   padding: 12px;
   box-shadow: 0 4px 16px rgba(24, 40, 72, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.benchCanvasFit {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 #benchCanvas {
-  width: 100%;
-  max-width: none;
+  display: block;
+  flex-shrink: 0;
   border: 1px solid #d2dae8;
   border-radius: 8px;
   background: #0e1728;
 }
 
 @media (max-width: 980px) {
-  .app {
-    grid-template-columns: 1fr;
+  .benchRow {
+    flex-direction: column;
+  }
+
+  .benchWrap {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .sourceDirectionBanner {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-width: none;
+    justify-content: center;
+    align-items: center;
+    padding: 12px 14px;
+  }
+
+  .verticalSliderWrap {
+    width: min(100%, 560px);
+    min-height: 0;
+    flex: 0 0 auto;
+    height: 36px;
+    align-self: center;
+  }
+
+  .verticalSliderWrap input[type="range"] {
+    width: 100%;
+    transform: none;
+    height: 28px;
+  }
+
+  .sourceDirectionBanner #resetSourceDirection {
+    writing-mode: horizontal-tb;
+    transform: none;
+    padding: 10px 12px;
+    font-size: 0.85rem;
   }
 }

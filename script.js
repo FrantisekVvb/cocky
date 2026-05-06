@@ -12,14 +12,18 @@ const source = {
 
 const lenses = [];
 let lensId = 1;
+/** Čočka zobrazená v panelu (klik na čočku na lavici). */
+let selectedLensId = null;
 
 const lensesContainer = document.getElementById("lensesContainer");
 const addConvergingBtn = document.getElementById("addConverging");
 const addDivergingBtn = document.getElementById("addDiverging");
 const resetLensesBtn = document.getElementById("resetLenses");
 const sourceDirectionInput = document.getElementById("sourceDirection");
-const sourceDirectionLabel = document.getElementById("sourceDirectionLabel");
 const resetSourceDirectionBtn = document.getElementById("resetSourceDirection");
+const benchWrapEl = document.querySelector(".benchWrap");
+const benchRowEl = document.querySelector(".benchRow");
+const verticalSliderWrapEl = document.querySelector(".verticalSliderWrap");
 const uiZoom = 1.7;
 const lensVisualHeightPx = Math.round(190 * uiZoom);
 const lensGrabTolerancePx = Math.round(12 * uiZoom);
@@ -29,22 +33,25 @@ addConvergingBtn.addEventListener("click", () => addLens("converging"));
 addDivergingBtn.addEventListener("click", () => addLens("diverging"));
 resetLensesBtn.addEventListener("click", () => {
   lenses.length = 0;
+  selectedLensId = null;
   renderLensControls();
   draw();
 });
+function syncSourceDirectionUi() {
+  const text = getDirectionText(source.direction);
+  sourceDirectionInput.setAttribute("aria-valuetext", text);
+  sourceDirectionInput.title = `Směr svazku: ${text}`;
+}
+
 sourceDirectionInput.addEventListener("input", () => {
   source.direction = Number(sourceDirectionInput.value);
-  sourceDirectionLabel.textContent = `Směr svazku: ${getDirectionText(
-    source.direction
-  )}`;
+  syncSourceDirectionUi();
   draw();
 });
 resetSourceDirectionBtn.addEventListener("click", () => {
   source.direction = 0;
   sourceDirectionInput.value = "0";
-  sourceDirectionLabel.textContent = `Směr svazku: ${getDirectionText(
-    source.direction
-  )}`;
+  syncSourceDirectionUi();
   draw();
 });
 canvas.addEventListener("pointerdown", handlePointerDown);
@@ -53,8 +60,9 @@ canvas.addEventListener("pointerup", handlePointerUp);
 canvas.addEventListener("pointercancel", handlePointerUp);
 
 function addLens(type) {
+  const id = lensId++;
   lenses.push({
-    id: lensId++,
+    id,
     type,
     x: 90 + Math.random() * 50,
     focalLength: type === "converging" ? 20 : -20,
@@ -67,83 +75,97 @@ function addLens(type) {
 function renderLensControls() {
   lensesContainer.innerHTML = "";
 
-  if (lenses.length === 0) {
-    const hint = document.createElement("p");
-    hint.textContent = "Žádná čočka. Přidej spojku nebo rozptylku.";
-    lensesContainer.appendChild(hint);
+  if (
+    selectedLensId !== null &&
+    !lenses.some((l) => l.id === selectedLensId)
+  ) {
+    selectedLensId = null;
+  }
+
+  if (selectedLensId === null) {
     return;
   }
 
-  lenses.forEach((lens) => {
-    lens.focalLength = normalizeFocalLength(lens.type, lens.focalLength);
+  const lens = lenses.find((l) => l.id === selectedLensId);
+  if (!lens) {
+    selectedLensId = null;
+    return;
+  }
 
-    const card = document.createElement("article");
-    card.className = "lensCard";
+  lens.focalLength = normalizeFocalLength(lens.type, lens.focalLength);
 
-    const header = document.createElement("div");
-    header.className = "lensHeader";
+  const card = document.createElement("article");
+  card.className = "lensCardDetail";
 
-    const title = document.createElement("h3");
-    title.className = "lensTitle";
-    title.textContent =
-      lens.type === "converging"
-        ? `Spojka #${lens.id}`
-        : `Rozptylka #${lens.id}`;
+  const top = document.createElement("div");
+  top.className = "lensCardTop";
 
-    const removeBtn = document.createElement("button");
-    removeBtn.className = "removeBtn";
-    removeBtn.textContent = "Odebrat";
-    removeBtn.addEventListener("click", () => {
-      const index = lenses.findIndex((l) => l.id === lens.id);
-      if (index >= 0) {
-        lenses.splice(index, 1);
-        renderLensControls();
-        draw();
-      }
-    });
+  const titles = document.createElement("div");
+  titles.className = "lensCardTitles";
 
-    header.appendChild(title);
-    header.appendChild(removeBtn);
-    card.appendChild(header);
+  const title = document.createElement("h3");
+  title.className = "lensTitle";
+  title.textContent =
+    lens.type === "converging"
+      ? `Spojka #${lens.id}`
+      : `Rozptylka #${lens.id}`;
 
-    const powerControl = buildRangeControl({
-      label: `Ohnisková vzdálenost: ${lens.focalLength.toFixed(0)} cm`,
-      min: lens.type === "converging" ? 5 : -120,
-      max: lens.type === "converging" ? 120 : -5,
-      step: 1,
-      value: lens.focalLength,
-      onInput: (value, labelNode) => {
-        lens.focalLength = normalizeFocalLength(lens.type, Number(value));
-        labelNode.textContent = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(
-          0
-        )} cm`;
-        draw();
-      },
-    });
+  const focalSummary = document.createElement("p");
+  focalSummary.className = "lensFocalSummary";
+  focalSummary.textContent = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(
+    0
+  )} cm`;
 
-    card.appendChild(powerControl);
-    lensesContainer.appendChild(card);
+  titles.appendChild(title);
+  titles.appendChild(focalSummary);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "removeBtn";
+  removeBtn.type = "button";
+  removeBtn.textContent = "Odebrat";
+  removeBtn.addEventListener("click", () => {
+    const index = lenses.findIndex((l) => l.id === lens.id);
+    if (index >= 0) {
+      lenses.splice(index, 1);
+    }
+    selectedLensId = null;
+    renderLensControls();
+    draw();
   });
-}
 
-function buildRangeControl({ label, min, max, step, value, onInput }) {
-  const wrap = document.createElement("div");
-  wrap.className = "control";
+  top.appendChild(titles);
+  top.appendChild(removeBtn);
+  card.appendChild(top);
 
-  const labelNode = document.createElement("label");
-  labelNode.textContent = label;
+  const sliderWrap = document.createElement("div");
+  sliderWrap.className = "lensPowerSlider";
 
   const input = document.createElement("input");
   input.type = "range";
-  input.min = String(min);
-  input.max = String(max);
-  input.step = String(step);
-  input.value = String(value);
-  input.addEventListener("input", () => onInput(input.value, labelNode));
+  input.min = String(lens.type === "converging" ? 5 : -120);
+  input.max = String(lens.type === "converging" ? 120 : -5);
+  input.step = "1";
+  input.value = String(lens.focalLength);
+  input.setAttribute(
+    "aria-label",
+    `Ohnisková vzdálenost, ${lens.focalLength.toFixed(0)} cm`
+  );
+  input.addEventListener("input", () => {
+    lens.focalLength = normalizeFocalLength(lens.type, Number(input.value));
+    focalSummary.textContent = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(
+      0
+    )} cm`;
+    input.setAttribute(
+      "aria-valuetext",
+      `${lens.focalLength.toFixed(0)} centimetrů`
+    );
+    draw();
+  });
 
-  wrap.appendChild(labelNode);
-  wrap.appendChild(input);
-  return wrap;
+  sliderWrap.appendChild(input);
+  card.appendChild(sliderWrap);
+
+  lensesContainer.appendChild(card);
 }
 
 function normalizeFocalLength(type, value) {
@@ -164,30 +186,71 @@ function getDirectionText(direction) {
   return `rovnoběžný (${direction.toFixed(2)})`;
 }
 
+/** y na konci lavice při přímém šíření bez čoček — počet paprsků podle něj závisí jen na směru svazku, ne na čočkách. */
+function yAtBenchEndWithoutLenses(ray) {
+  const dx = bench.worldLengthCm - bench.sourceX;
+  return ray.y + ray.theta * dx;
+}
+
+function rayPassesVirtualApertureStraight(ray) {
+  return Math.abs(yAtBenchEndWithoutLenses(ray)) <= lensHalfHeightCm();
+}
+
 function createRays() {
-  const rayIndices = [-2, -1, 0, 1, 2];
+  const minThroughEnd = 5;
+  const outerSlotIndex = 2;
   const baseSpacingCm = 7 * uiZoom;
   const xRefCm = 40;
   const dxRef = Math.max(0.0001, xRefCm - bench.sourceX);
+  const anglePerIndex = 0.09;
+  const maxDensityFactor = 48;
 
-  // For diverging bundle (direction < 0):
-  // - ray spacing at x = 20 cm stays constant (yRef),
-  // - at maximum diverging (direction = -1) all rays pass through (0 cm, 0).
-  if (source.direction < 0) {
-    const t = Math.min(1, Math.max(0, -source.direction)); // 0..1
-    return rayIndices.map((index) => {
-      const yRef = index * baseSpacingCm; // fixed spacing at xRef
+  function divergingRaysForDensity(densityFactor) {
+    const spacing = baseSpacingCm / densityFactor;
+    const maxIdx = outerSlotIndex * densityFactor;
+    const t = Math.min(1, Math.max(0, -source.direction));
+    const rays = [];
+    for (let index = -maxIdx; index <= maxIdx; index += 1) {
+      const yRef = index * spacing;
       const yAtSource = yRef * (1 - t);
       const theta = (yRef - yAtSource) / dxRef;
-      return { y: yAtSource, theta };
-    });
+      rays.push({ y: yAtSource, theta });
+    }
+    return rays;
   }
 
-  const anglePerIndex = 0.09;
-  return rayIndices.map((index) => ({
-    y: index * baseSpacingCm,
-    theta: -source.direction * index * anglePerIndex,
-  }));
+  function convergingOrParallelRaysForDensity(densityFactor) {
+    const spacing = baseSpacingCm / densityFactor;
+    const maxIdx = outerSlotIndex * densityFactor;
+    const angleScale = anglePerIndex / densityFactor;
+    const rays = [];
+    for (let index = -maxIdx; index <= maxIdx; index += 1) {
+      rays.push({
+        y: index * spacing,
+        theta: -source.direction * index * angleScale,
+      });
+    }
+    return rays;
+  }
+
+  let densityFactor = 1;
+  let rays =
+    source.direction < 0
+      ? divergingRaysForDensity(densityFactor)
+      : convergingOrParallelRaysForDensity(densityFactor);
+
+  while (
+    rays.filter(rayPassesVirtualApertureStraight).length < minThroughEnd &&
+    densityFactor < maxDensityFactor
+  ) {
+    densityFactor += 1;
+    rays =
+      source.direction < 0
+        ? divergingRaysForDensity(densityFactor)
+        : convergingOrParallelRaysForDensity(densityFactor);
+  }
+
+  return rays;
 }
 
 function xToPx(x) {
@@ -238,14 +301,22 @@ function handlePointerDown(event) {
   const point = getCanvasPoint(event);
   const lens = getLensAtCanvasPoint(point);
   if (!lens) {
+    if (selectedLensId !== null) {
+      selectedLensId = null;
+      renderLensControls();
+    }
+    draw();
     return;
   }
+  selectedLensId = lens.id;
+  renderLensControls();
   canvas.setPointerCapture(event.pointerId);
   dragState = {
     lensId: lens.id,
     pointerId: event.pointerId,
   };
   canvas.style.cursor = "grabbing";
+  draw();
 }
 
 function handlePointerMove(event) {
@@ -265,7 +336,6 @@ function handlePointerMove(event) {
     const maxX = 190;
     lens.x = Math.max(minX, Math.min(maxX, pxToX(point.x)));
     lenses.sort((a, b) => a.x - b.x);
-    renderLensControls();
     draw();
     canvas.style.cursor = "grabbing";
     return;
@@ -388,9 +458,14 @@ function traceRay(ray) {
 
 function drawRays() {
   const rays = createRays();
+  const hueLeft = 15;
+  const hueSpan = 4 * 18;
   rays.forEach((ray, idx) => {
     const points = traceRay(ray);
-    const hue = 15 + idx * 18;
+    const hue =
+      rays.length <= 1
+        ? hueLeft + hueSpan / 2
+        : hueLeft + (idx / (rays.length - 1)) * hueSpan;
     ctx.strokeStyle = `hsl(${hue}, 95%, 62%)`;
     ctx.lineWidth = 2 * uiZoom;
     ctx.beginPath();
@@ -436,8 +511,59 @@ function draw() {
   drawScale();
 }
 
+function fitBenchWorkspaceCanvas() {
+  if (!benchWrapEl || !canvas) return;
+  const cs = getComputedStyle(benchWrapEl);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const availW = Math.max(1, benchWrapEl.clientWidth - padX);
+  const availH = Math.max(1, benchWrapEl.clientHeight - padY);
+  const cw = canvas.width;
+  const ch = canvas.height;
+  const scale = Math.min(availW / cw, availH / ch, 1);
+  canvas.style.width = `${cw * scale}px`;
+  canvas.style.height = `${ch * scale}px`;
+}
+
+function fitDirectionSliderTrack() {
+  if (!verticalSliderWrapEl || !sourceDirectionInput) return;
+  if (window.matchMedia("(max-width: 980px)").matches) {
+    sourceDirectionInput.style.width = "";
+    return;
+  }
+  const h = verticalSliderWrapEl.clientHeight;
+  const len = Math.max(48, h - 8);
+  sourceDirectionInput.style.width = `${len}px`;
+}
+
+function fitWorkspaceLayout() {
+  fitBenchWorkspaceCanvas();
+  fitDirectionSliderTrack();
+}
+
+if (typeof ResizeObserver !== "undefined") {
+  if (benchWrapEl) {
+    new ResizeObserver(fitWorkspaceLayout).observe(benchWrapEl);
+  }
+  if (benchRowEl) {
+    new ResizeObserver(fitWorkspaceLayout).observe(benchRowEl);
+  }
+  if (verticalSliderWrapEl) {
+    new ResizeObserver(fitWorkspaceLayout).observe(verticalSliderWrapEl);
+  }
+} else {
+  window.addEventListener("resize", fitWorkspaceLayout);
+}
+
+window.addEventListener("orientationchange", () => {
+  requestAnimationFrame(fitWorkspaceLayout);
+});
+
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", fitWorkspaceLayout);
+}
+
 renderLensControls();
-sourceDirectionLabel.textContent = `Směr svazku: ${getDirectionText(
-  source.direction
-)}`;
+syncSourceDirectionUi();
+fitWorkspaceLayout();
 draw();
