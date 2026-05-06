@@ -3,7 +3,7 @@ const ctx = canvas.getContext("2d");
 
 const bench = {
   worldLengthCm: 200,
-  sourceX: 8,
+  sourceX: 0,
 };
 
 const source = {
@@ -20,8 +20,9 @@ const resetLensesBtn = document.getElementById("resetLenses");
 const sourceDirectionInput = document.getElementById("sourceDirection");
 const sourceDirectionLabel = document.getElementById("sourceDirectionLabel");
 const resetSourceDirectionBtn = document.getElementById("resetSourceDirection");
-const lensVisualHeightPx = 190;
-const lensGrabTolerancePx = 12;
+const uiZoom = 1.7;
+const lensVisualHeightPx = Math.round(190 * uiZoom);
+const lensGrabTolerancePx = Math.round(12 * uiZoom);
 let dragState = null;
 
 addConvergingBtn.addEventListener("click", () => addLens("converging"));
@@ -165,13 +166,26 @@ function getDirectionText(direction) {
 
 function createRays() {
   const rayIndices = [-2, -1, 0, 1, 2];
-  const baseSpacingCm = 7;
-  const startSpreadFactor =
-    source.direction < 0 ? Math.max(0, 1 + 2.6 * source.direction) : 1;
-  const anglePerIndex = 0.09;
+  const baseSpacingCm = 7 * uiZoom;
+  const xRefCm = 40;
+  const dxRef = Math.max(0.0001, xRefCm - bench.sourceX);
 
+  // For diverging bundle (direction < 0):
+  // - ray spacing at x = 20 cm stays constant (yRef),
+  // - at maximum diverging (direction = -1) all rays pass through (0 cm, 0).
+  if (source.direction < 0) {
+    const t = Math.min(1, Math.max(0, -source.direction)); // 0..1
+    return rayIndices.map((index) => {
+      const yRef = index * baseSpacingCm; // fixed spacing at xRef
+      const yAtSource = yRef * (1 - t);
+      const theta = (yRef - yAtSource) / dxRef;
+      return { y: yAtSource, theta };
+    });
+  }
+
+  const anglePerIndex = 0.09;
   return rayIndices.map((index) => ({
-    y: index * baseSpacingCm * startSpreadFactor,
+    y: index * baseSpacingCm,
     theta: -source.direction * index * anglePerIndex,
   }));
 }
@@ -185,11 +199,11 @@ function pxToX(px) {
 }
 
 function yToPx(y) {
-  return canvas.height * 0.5 - y * 3.2;
+  return canvas.height * 0.5 - y * (3.2 * uiZoom);
 }
 
 function lensHalfHeightCm() {
-  return (lensVisualHeightPx / 2) / 3.2;
+  return (lensVisualHeightPx / 2) / (3.2 * uiZoom);
 }
 
 function getCanvasPoint(event) {
@@ -284,10 +298,6 @@ function drawBench() {
   ctx.lineTo(canvas.width, canvas.height / 2);
   ctx.stroke();
 
-  ctx.fillStyle = "#d8e0f2";
-  ctx.font = "14px Arial";
-  ctx.fillText("Optická osa", 8, canvas.height / 2 - 8);
-
   const sourceXPx = xToPx(bench.sourceX);
   ctx.strokeStyle = "#7a8db5";
   ctx.lineWidth = 1.5;
@@ -310,7 +320,7 @@ function drawLens(lens) {
     Math.min(maxAbsFocal, Math.abs(lens.focalLength))
   );
   const t = (clampedAbsFocal - minAbsFocal) / (maxAbsFocal - minAbsFocal);
-  const lineWidth = 5.2 - t * 4.4;
+  const lineWidth = (5.2 - t * 4.4) * uiZoom;
 
   ctx.lineWidth = lineWidth;
   ctx.strokeStyle = lens.type === "converging" ? "#66d9ef" : "#ff7f8f";
@@ -320,25 +330,29 @@ function drawLens(lens) {
   ctx.stroke();
 
   ctx.fillStyle = ctx.strokeStyle;
-  ctx.font = "12px Arial";
-  ctx.fillText(`${lens.id}`, x + 6, centerY - h / 2 - 8);
-  ctx.fillText(`${lens.focalLength.toFixed(0)} cm`, x - 24, centerY + h / 2 + 18);
+  ctx.font = `${Math.round(12 * uiZoom)}px Arial`;
+  ctx.fillText(`${lens.id}`, x + Math.round(6 * uiZoom), centerY - h / 2 - Math.round(8 * uiZoom));
+  ctx.fillText(
+    `${lens.focalLength.toFixed(0)} cm`,
+    x - Math.round(24 * uiZoom),
+    centerY + h / 2 + Math.round(18 * uiZoom)
+  );
 
   ctx.beginPath();
   if (lens.type === "converging") {
-    ctx.moveTo(x - 8, centerY - h / 2 + 10);
+    ctx.moveTo(x - Math.round(8 * uiZoom), centerY - h / 2 + Math.round(10 * uiZoom));
     ctx.lineTo(x, centerY - h / 2);
-    ctx.lineTo(x + 8, centerY - h / 2 + 10);
-    ctx.moveTo(x - 8, centerY + h / 2 - 10);
+    ctx.lineTo(x + Math.round(8 * uiZoom), centerY - h / 2 + Math.round(10 * uiZoom));
+    ctx.moveTo(x - Math.round(8 * uiZoom), centerY + h / 2 - Math.round(10 * uiZoom));
     ctx.lineTo(x, centerY + h / 2);
-    ctx.lineTo(x + 8, centerY + h / 2 - 10);
+    ctx.lineTo(x + Math.round(8 * uiZoom), centerY + h / 2 - Math.round(10 * uiZoom));
   } else {
-    ctx.moveTo(x - 8, centerY - h / 2);
-    ctx.lineTo(x, centerY - h / 2 + 10);
-    ctx.lineTo(x + 8, centerY - h / 2);
-    ctx.moveTo(x - 8, centerY + h / 2);
-    ctx.lineTo(x, centerY + h / 2 - 10);
-    ctx.lineTo(x + 8, centerY + h / 2);
+    ctx.moveTo(x - Math.round(8 * uiZoom), centerY - h / 2);
+    ctx.lineTo(x, centerY - h / 2 + Math.round(10 * uiZoom));
+    ctx.lineTo(x + Math.round(8 * uiZoom), centerY - h / 2);
+    ctx.moveTo(x - Math.round(8 * uiZoom), centerY + h / 2);
+    ctx.lineTo(x, centerY + h / 2 - Math.round(10 * uiZoom));
+    ctx.lineTo(x + Math.round(8 * uiZoom), centerY + h / 2);
   }
   ctx.stroke();
 }
@@ -378,7 +392,7 @@ function drawRays() {
     const points = traceRay(ray);
     const hue = 15 + idx * 18;
     ctx.strokeStyle = `hsl(${hue}, 95%, 62%)`;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * uiZoom;
     ctx.beginPath();
     points.forEach((p, index) => {
       const px = xToPx(p.x);
@@ -396,16 +410,23 @@ function drawRays() {
 function drawScale() {
   ctx.strokeStyle = "#6f84b2";
   ctx.fillStyle = "#b8c7e6";
-  ctx.lineWidth = 1;
-  ctx.font = "12px Arial";
+  ctx.lineWidth = 1 * uiZoom;
+  ctx.font = `${Math.round(12 * uiZoom)}px Arial`;
 
   for (let x = 0; x <= bench.worldLengthCm + 0.0001; x += 20) {
     const xp = xToPx(x);
     ctx.beginPath();
-    ctx.moveTo(xp, canvas.height / 2 - 6);
-    ctx.lineTo(xp, canvas.height / 2 + 6);
+    ctx.moveTo(xp, canvas.height / 2 - Math.round(6 * uiZoom));
+    ctx.lineTo(xp, canvas.height / 2 + Math.round(6 * uiZoom));
     ctx.stroke();
-    ctx.fillText(`${x.toFixed(0)} cm`, xp - 18, canvas.height / 2 + 22);
+    const text = `${x.toFixed(0)} cm`;
+    const textWidth = ctx.measureText(text).width;
+    const pad = Math.round(6 * uiZoom);
+    const textX = Math.min(
+      canvas.width - textWidth - pad,
+      Math.max(pad, xp - textWidth / 2)
+    );
+    ctx.fillText(text, textX, canvas.height / 2 + Math.round(22 * uiZoom));
   }
 }
 
