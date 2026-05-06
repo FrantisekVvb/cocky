@@ -10,32 +10,12 @@
     <main class="app">
       <section class="panel">
         <h1>Simulace optické lavice</h1>
-        <p>
-          Zdroj světla vlevo vysílá 5 laserových paprsků. Do dráhy můžeš vkládat
-          spojky i rozptylky a měnit jejich ohniskovou vzdálenost.
-        </p>
 
         <div id="lensesContainer" class="lenses"></div>
       </section>
 
       <section class="benchRow">
         <aside class="sourceDirectionBanner" aria-label="Směr svazku">
-          <div class="verticalSliderWrap">
-            <input
-              id="sourceDirection"
-              type="range"
-              min="-1"
-              max="1"
-              step="0.01"
-              value="0"
-              aria-label="Směr svazku"
-            />
-          </div>
-          <button id="resetSourceDirection" class="secondary" type="button">
-            Rovnoběžně
-          </button>
-        </aside>
-        <section class="benchWrap">
           <div
             class="benchWorkspaceToolbar"
             role="toolbar"
@@ -48,14 +28,16 @@
               aria-label="Přidat spojku"
               title="Přidat spojku"
             >
-              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <svg
+                width="9"
+                height="20"
+                viewBox="0 0 8 17"
+                fill="none"
+                aria-hidden="true"
+              >
                 <path
-                  d="M12 5 L12 19 M7 10 L12 5 L17 10 M7 14 L12 19 L17 14"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  d="M4.03544 0.146447C3.84018 -0.0488155 3.52359 -0.0488155 3.32833 0.146447L0.146351 3.32843C-0.0489113 3.52369 -0.0489113 3.84027 0.146351 4.03553C0.341613 4.2308 0.658195 4.2308 0.853458 4.03553L3.68188 1.20711L6.51031 4.03553C6.70557 4.2308 7.02216 4.2308 7.21742 4.03553C7.41268 3.84027 7.41268 3.52369 7.21742 3.32843L4.03544 0.146447ZM3.32833 16.8614C3.52359 17.0566 3.84018 17.0566 4.03544 16.8614L7.21742 13.6794C7.41268 13.4841 7.41268 13.1675 7.21742 12.9723C7.02216 12.777 6.70557 12.777 6.51031 12.9723L3.68188 15.8007L0.853458 12.9723C0.658195 12.777 0.341613 12.777 0.146351 12.9723C-0.0489113 13.1675 -0.0489113 13.4841 0.146351 13.6794L3.32833 16.8614ZM3.68188 0.5H3.18188V16.5078H3.68188H4.18188V0.5H3.68188Z"
+                  fill="currentColor"
                 />
               </svg>
             </button>
@@ -66,14 +48,21 @@
               aria-label="Přidat rozptylku"
               title="Přidat rozptylku"
             >
-              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <svg
+                width="9"
+                height="20"
+                viewBox="0 0 8 18"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path d="M3.68188 3.672V13.6798" stroke="currentColor" />
                 <path
-                  d="M12 5 L12 19 M7 5 L12 10 L17 5 M7 19 L12 14 L17 19"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+                  d="M3.32833 4.03555C3.52359 4.23081 3.84018 4.23081 4.03544 4.03555L7.21742 0.85357C7.41268 0.658308 7.41268 0.341725 7.21742 0.146463C7.02216 -0.048799 6.70557 -0.048799 6.51031 0.146463L3.68188 2.97489L0.853458 0.146463C0.658195 -0.048799 0.341613 -0.048799 0.146351 0.146463C-0.0489113 0.341725 -0.0489113 0.658308 0.146351 0.85357L3.32833 4.03555ZM3.68188 3.672H3.18188V3.682H3.68188H4.18188V3.672H3.68188Z"
+                  fill="currentColor"
+                />
+                <path
+                  d="M3.32833 13.3185C3.52359 13.1232 3.84018 13.1232 4.03544 13.3185L7.21742 16.5004C7.41268 16.6957 7.41268 17.0123 7.21742 17.2075C7.02216 17.4028 6.70557 17.4028 6.51031 17.2075L3.68188 14.3791L0.853458 17.2075C0.658195 17.4028 0.341613 17.4028 0.146351 17.2075C-0.0489113 17.0123 -0.0489113 16.6957 0.146351 16.5004L3.32833 13.3185ZM3.68188 13.682H3.18188V13.672H3.68188H4.18188V13.682H3.68188Z"
+                  fill="currentColor"
                 />
               </svg>
             </button>
@@ -84,7 +73,7 @@
               aria-label="Vymazat čočky"
               title="Vymazat čočky"
             >
-              <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
                 <path
                   d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
                   fill="none"
@@ -96,8 +85,95 @@
               </svg>
             </button>
           </div>
+          <div class="sourceDirectionSliderShell">
+            <div class="sourceDirectionSliderStack">
+              <div class="verticalSliderWrap">
+                <input
+                  id="sourceDirection"
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.01"
+                  value="0"
+                  aria-label="Směr svazku"
+                />
+              </div>
+              <button
+                id="fiveRaysToggle"
+                class="sourceFiveRaysBtn"
+                type="button"
+                aria-pressed="false"
+                aria-label="Jen pět paprsků"
+                title="Jen pět paprsků"
+              >
+                5
+              </button>
+              <button
+                id="resetSourceDirection"
+                class="secondary sourceParallelResetBtn"
+                type="button"
+                aria-label="Rovnoběžný svazek"
+                title="Rovnoběžně"
+              >
+              <svg
+                width="13"
+                height="11"
+                viewBox="0 0 13 11"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M0.5 0.5H12.5"
+                  stroke="white"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M0.5 5.25H12.5"
+                  stroke="white"
+                  stroke-linecap="round"
+                />
+                <path
+                  d="M0.5 10H12.5"
+                  stroke="white"
+                  stroke-linecap="round"
+                />
+              </svg>
+              </button>
+            </div>
+          </div>
+        </aside>
+        <section class="benchWrap">
           <div class="benchCanvasFit">
             <canvas id="benchCanvas" width="2000" height="650"></canvas>
+          </div>
+          <div id="lensFocalHud" class="lensFocalHud" hidden>
+            <div class="lensFocalHudTop">
+              <label
+                id="lensFocalHudLabel"
+                class="lensFocalHudLabel"
+                for="lensFocalHudInput"
+              ></label>
+              <button
+                id="lensFocalHudRemoveBtn"
+                type="button"
+                class="lensFocalHudRemoveBtn"
+                aria-label="Smazat čočku"
+                title="Smazat čočku"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path
+                    d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <input id="lensFocalHudInput" type="range" step="1" />
           </div>
         </section>
       </section>

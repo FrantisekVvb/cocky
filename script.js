@@ -21,13 +21,25 @@ const addDivergingBtn = document.getElementById("addDiverging");
 const resetLensesBtn = document.getElementById("resetLenses");
 const sourceDirectionInput = document.getElementById("sourceDirection");
 const resetSourceDirectionBtn = document.getElementById("resetSourceDirection");
+const fiveRaysToggleBtn = document.getElementById("fiveRaysToggle");
 const benchWrapEl = document.querySelector(".benchWrap");
 const benchRowEl = document.querySelector(".benchRow");
 const verticalSliderWrapEl = document.querySelector(".verticalSliderWrap");
-const uiZoom = 1.7;
+const lensFocalHudEl = document.getElementById("lensFocalHud");
+const lensFocalHudInput = document.getElementById("lensFocalHudInput");
+const lensFocalHudLabel = document.getElementById("lensFocalHudLabel");
+const lensFocalHudRemoveBtn = document.getElementById("lensFocalHudRemoveBtn");
+const uiZoom = 1.85;
 const lensVisualHeightPx = Math.round(190 * uiZoom);
 const lensGrabTolerancePx = Math.round(12 * uiZoom);
 let dragState = null;
+/** Panel ohniska pod lavicí jen po upuštění bez tažení (ne při posunu čočky). */
+let showFloatingLensHud = false;
+let lensPointerOrigin = null;
+let lensPointerDragged = false;
+const LENS_HUD_CLICK_TOLERANCE_PX = 6;
+/** Zapnuto: jen základních 5 paprsků (densityFactor 1), bez doplňování hustoty. */
+let forceFiveRaysMode = false;
 
 addConvergingBtn.addEventListener("click", () => addLens("converging"));
 addDivergingBtn.addEventListener("click", () => addLens("diverging"));
@@ -54,10 +66,99 @@ resetSourceDirectionBtn.addEventListener("click", () => {
   syncSourceDirectionUi();
   draw();
 });
+
+fiveRaysToggleBtn?.addEventListener("click", () => {
+  forceFiveRaysMode = !forceFiveRaysMode;
+  fiveRaysToggleBtn.setAttribute("aria-pressed", String(forceFiveRaysMode));
+  fiveRaysToggleBtn.classList.toggle(
+    "sourceFiveRaysBtnActive",
+    forceFiveRaysMode
+  );
+  draw();
+});
+
 canvas.addEventListener("pointerdown", handlePointerDown);
 canvas.addEventListener("pointermove", handlePointerMove);
 canvas.addEventListener("pointerup", handlePointerUp);
 canvas.addEventListener("pointercancel", handlePointerUp);
+
+lensFocalHudRemoveBtn?.addEventListener("click", () => {
+  const lens = getSelectedLens();
+  if (!lens) return;
+  const index = lenses.findIndex((l) => l.id === lens.id);
+  if (index >= 0) {
+    lenses.splice(index, 1);
+  }
+  selectedLensId = null;
+  renderLensControls();
+  draw();
+});
+
+lensFocalHudInput.addEventListener("input", () => {
+  const lens = getSelectedLens();
+  if (!lens) return;
+  lens.focalLength = normalizeFocalLength(
+    lens.type,
+    Number(lensFocalHudInput.value)
+  );
+  const txt = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(0)} cm`;
+  lensFocalHudLabel.textContent = txt;
+  lensFocalHudInput.setAttribute(
+    "aria-valuetext",
+    `${lens.focalLength.toFixed(0)} cm`
+  );
+  draw();
+});
+
+function getSelectedLens() {
+  return selectedLensId !== null
+    ? lenses.find((l) => l.id === selectedLensId) ?? null
+    : null;
+}
+
+function positionLensFocalHud(lens) {
+  if (!lensFocalHudEl || lensFocalHudEl.hidden || !lens || !canvas) return;
+  const canvasRect = canvas.getBoundingClientRect();
+  const scaleX = canvasRect.width / canvas.width;
+  const scaleY = canvasRect.height / canvas.height;
+  const cx = xToPx(lens.x);
+  const centerY = canvas.height / 2;
+  const h = lensVisualHeightPx;
+  const bottomY =
+    centerY + h / 2 + Math.round(22 * uiZoom) + Math.round(6 * uiZoom);
+  const left = canvasRect.left + cx * scaleX;
+  const top = canvasRect.top + bottomY * scaleY;
+  lensFocalHudEl.style.left = `${left}px`;
+  lensFocalHudEl.style.top = `${top}px`;
+}
+
+function syncLensFocalHud() {
+  const lens = getSelectedLens();
+  if (!lensFocalHudEl || !lensFocalHudInput || !lensFocalHudLabel) return;
+  if (!lens) {
+    lensFocalHudEl.hidden = true;
+    showFloatingLensHud = false;
+    return;
+  }
+  lens.focalLength = normalizeFocalLength(lens.type, lens.focalLength);
+  lensFocalHudInput.min = String(lens.type === "converging" ? 5 : -120);
+  lensFocalHudInput.max = String(lens.type === "converging" ? 120 : -5);
+  lensFocalHudInput.value = String(lens.focalLength);
+  const txt = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(0)} cm`;
+  lensFocalHudLabel.textContent = txt;
+  lensFocalHudInput.setAttribute(
+    "aria-valuetext",
+    `${lens.focalLength.toFixed(0)} cm`
+  );
+  lensFocalHudInput.setAttribute(
+    "aria-label",
+    "Ohnisková vzdálenost aktivní čočky"
+  );
+  lensFocalHudEl.hidden = !showFloatingLensHud;
+  if (!lensFocalHudEl.hidden) {
+    positionLensFocalHud(lens);
+  }
+}
 
 function addLens(type) {
   const id = lensId++;
@@ -83,89 +184,19 @@ function renderLensControls() {
   }
 
   if (selectedLensId === null) {
+    syncLensFocalHud();
     return;
   }
 
   const lens = lenses.find((l) => l.id === selectedLensId);
   if (!lens) {
     selectedLensId = null;
+    syncLensFocalHud();
     return;
   }
 
   lens.focalLength = normalizeFocalLength(lens.type, lens.focalLength);
-
-  const card = document.createElement("article");
-  card.className = "lensCardDetail";
-
-  const top = document.createElement("div");
-  top.className = "lensCardTop";
-
-  const titles = document.createElement("div");
-  titles.className = "lensCardTitles";
-
-  const title = document.createElement("h3");
-  title.className = "lensTitle";
-  title.textContent =
-    lens.type === "converging"
-      ? `Spojka #${lens.id}`
-      : `Rozptylka #${lens.id}`;
-
-  const focalSummary = document.createElement("p");
-  focalSummary.className = "lensFocalSummary";
-  focalSummary.textContent = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(
-    0
-  )} cm`;
-
-  titles.appendChild(title);
-  titles.appendChild(focalSummary);
-
-  const removeBtn = document.createElement("button");
-  removeBtn.className = "removeBtn";
-  removeBtn.type = "button";
-  removeBtn.textContent = "Odebrat";
-  removeBtn.addEventListener("click", () => {
-    const index = lenses.findIndex((l) => l.id === lens.id);
-    if (index >= 0) {
-      lenses.splice(index, 1);
-    }
-    selectedLensId = null;
-    renderLensControls();
-    draw();
-  });
-
-  top.appendChild(titles);
-  top.appendChild(removeBtn);
-  card.appendChild(top);
-
-  const sliderWrap = document.createElement("div");
-  sliderWrap.className = "lensPowerSlider";
-
-  const input = document.createElement("input");
-  input.type = "range";
-  input.min = String(lens.type === "converging" ? 5 : -120);
-  input.max = String(lens.type === "converging" ? 120 : -5);
-  input.step = "1";
-  input.value = String(lens.focalLength);
-  input.setAttribute(
-    "aria-label",
-    `Ohnisková vzdálenost, ${lens.focalLength.toFixed(0)} cm`
-  );
-  input.addEventListener("input", () => {
-    lens.focalLength = normalizeFocalLength(lens.type, Number(input.value));
-    focalSummary.textContent = `Ohnisková vzdálenost: ${lens.focalLength.toFixed(
-      0
-    )} cm`;
-    input.setAttribute(
-      "aria-valuetext",
-      `${lens.focalLength.toFixed(0)} centimetrů`
-    );
-    draw();
-  });
-
-  sliderWrap.appendChild(input);
-  card.appendChild(sliderWrap);
-
-  lensesContainer.appendChild(card);
+  syncLensFocalHud();
 }
 
 function normalizeFocalLength(type, value) {
@@ -239,15 +270,17 @@ function createRays() {
       ? divergingRaysForDensity(densityFactor)
       : convergingOrParallelRaysForDensity(densityFactor);
 
-  while (
-    rays.filter(rayPassesVirtualApertureStraight).length < minThroughEnd &&
-    densityFactor < maxDensityFactor
-  ) {
-    densityFactor += 1;
-    rays =
-      source.direction < 0
-        ? divergingRaysForDensity(densityFactor)
-        : convergingOrParallelRaysForDensity(densityFactor);
+  if (!forceFiveRaysMode) {
+    while (
+      rays.filter(rayPassesVirtualApertureStraight).length < minThroughEnd &&
+      densityFactor < maxDensityFactor
+    ) {
+      densityFactor += 1;
+      rays =
+        source.direction < 0
+          ? divergingRaysForDensity(densityFactor)
+          : convergingOrParallelRaysForDensity(densityFactor);
+    }
   }
 
   return rays;
@@ -301,6 +334,9 @@ function handlePointerDown(event) {
   const point = getCanvasPoint(event);
   const lens = getLensAtCanvasPoint(point);
   if (!lens) {
+    lensPointerOrigin = null;
+    lensPointerDragged = false;
+    showFloatingLensHud = false;
     if (selectedLensId !== null) {
       selectedLensId = null;
       renderLensControls();
@@ -308,7 +344,13 @@ function handlePointerDown(event) {
     draw();
     return;
   }
+  const alreadySelected = selectedLensId === lens.id;
   selectedLensId = lens.id;
+  lensPointerOrigin = { x: event.clientX, y: event.clientY };
+  lensPointerDragged = false;
+  if (!alreadySelected) {
+    showFloatingLensHud = false;
+  }
   renderLensControls();
   canvas.setPointerCapture(event.pointerId);
   dragState = {
@@ -332,6 +374,20 @@ function handlePointerMove(event) {
       dragState = null;
       return;
     }
+    if (lensPointerOrigin) {
+      const dx = event.clientX - lensPointerOrigin.x;
+      const dy = event.clientY - lensPointerOrigin.y;
+      if (
+        dx * dx + dy * dy >
+        LENS_HUD_CLICK_TOLERANCE_PX * LENS_HUD_CLICK_TOLERANCE_PX
+      ) {
+        lensPointerDragged = true;
+        showFloatingLensHud = false;
+        if (lensFocalHudEl) {
+          lensFocalHudEl.hidden = true;
+        }
+      }
+    }
     const minX = 20;
     const maxX = 190;
     lens.x = Math.max(minX, Math.min(maxX, pxToX(point.x)));
@@ -353,6 +409,14 @@ function handlePointerUp(event) {
   }
   dragState = null;
   canvas.style.cursor = "default";
+
+  if (lensPointerOrigin !== null) {
+    showFloatingLensHud = !lensPointerDragged;
+    lensPointerOrigin = null;
+    lensPointerDragged = false;
+    syncLensFocalHud();
+    draw();
+  }
 }
 
 function drawBench() {
@@ -394,34 +458,31 @@ function drawLens(lens) {
 
   ctx.lineWidth = lineWidth;
   ctx.strokeStyle = lens.type === "converging" ? "#66d9ef" : "#ff7f8f";
+  const tipInset = Math.round(10 * uiZoom);
   ctx.beginPath();
-  ctx.moveTo(x, centerY - h / 2);
-  ctx.lineTo(x, centerY + h / 2);
+  if (lens.type === "converging") {
+    ctx.moveTo(x, centerY - h / 2);
+    ctx.lineTo(x, centerY + h / 2);
+  } else {
+    ctx.moveTo(x, centerY - h / 2 + tipInset);
+    ctx.lineTo(x, centerY + h / 2 - tipInset);
+  }
   ctx.stroke();
-
-  ctx.fillStyle = ctx.strokeStyle;
-  ctx.font = `${Math.round(12 * uiZoom)}px Arial`;
-  ctx.fillText(`${lens.id}`, x + Math.round(6 * uiZoom), centerY - h / 2 - Math.round(8 * uiZoom));
-  ctx.fillText(
-    `${lens.focalLength.toFixed(0)} cm`,
-    x - Math.round(24 * uiZoom),
-    centerY + h / 2 + Math.round(18 * uiZoom)
-  );
 
   ctx.beginPath();
   if (lens.type === "converging") {
-    ctx.moveTo(x - Math.round(8 * uiZoom), centerY - h / 2 + Math.round(10 * uiZoom));
+    ctx.moveTo(x - Math.round(8 * uiZoom), centerY - h / 2 + tipInset);
     ctx.lineTo(x, centerY - h / 2);
-    ctx.lineTo(x + Math.round(8 * uiZoom), centerY - h / 2 + Math.round(10 * uiZoom));
-    ctx.moveTo(x - Math.round(8 * uiZoom), centerY + h / 2 - Math.round(10 * uiZoom));
+    ctx.lineTo(x + Math.round(8 * uiZoom), centerY - h / 2 + tipInset);
+    ctx.moveTo(x - Math.round(8 * uiZoom), centerY + h / 2 - tipInset);
     ctx.lineTo(x, centerY + h / 2);
-    ctx.lineTo(x + Math.round(8 * uiZoom), centerY + h / 2 - Math.round(10 * uiZoom));
+    ctx.lineTo(x + Math.round(8 * uiZoom), centerY + h / 2 - tipInset);
   } else {
     ctx.moveTo(x - Math.round(8 * uiZoom), centerY - h / 2);
-    ctx.lineTo(x, centerY - h / 2 + Math.round(10 * uiZoom));
+    ctx.lineTo(x, centerY - h / 2 + tipInset);
     ctx.lineTo(x + Math.round(8 * uiZoom), centerY - h / 2);
     ctx.moveTo(x - Math.round(8 * uiZoom), centerY + h / 2);
-    ctx.lineTo(x, centerY + h / 2 - Math.round(10 * uiZoom));
+    ctx.lineTo(x, centerY + h / 2 - tipInset);
     ctx.lineTo(x + Math.round(8 * uiZoom), centerY + h / 2);
   }
   ctx.stroke();
@@ -505,10 +566,33 @@ function drawScale() {
   }
 }
 
+function drawLensFocalLabels() {
+  const centerY = canvas.height / 2;
+  const h = lensVisualHeightPx;
+  const y = centerY + h / 2 + Math.round(10 * uiZoom);
+  ctx.save();
+  ctx.font = `${Math.round(12 * uiZoom)}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.round(3 * uiZoom);
+  lenses.forEach((lens) => {
+    const x = xToPx(lens.x);
+    const text = `${lens.focalLength.toFixed(0)} cm`;
+    ctx.strokeStyle = "rgba(14, 23, 40, 0.92)";
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = lens.type === "converging" ? "#66d9ef" : "#ff7f8f";
+    ctx.fillText(text, x, y);
+  });
+  ctx.restore();
+}
+
 function draw() {
   drawBench();
   drawRays();
   drawScale();
+  drawLensFocalLabels();
+  positionLensFocalHud(getSelectedLens());
 }
 
 function fitBenchWorkspaceCanvas() {
@@ -539,6 +623,7 @@ function fitDirectionSliderTrack() {
 function fitWorkspaceLayout() {
   fitBenchWorkspaceCanvas();
   fitDirectionSliderTrack();
+  positionLensFocalHud(getSelectedLens());
 }
 
 if (typeof ResizeObserver !== "undefined") {
